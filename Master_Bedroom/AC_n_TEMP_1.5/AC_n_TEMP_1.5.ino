@@ -1,8 +1,7 @@
-// #include <IRremote.h>
 #include <Arduino.h>
 #include <MySensor.h>
 #include <MyTransportNRF24.h>
-// #include <MyHwATMega328.h>
+#include <MyHwATMega328.h>
 #include <SPI.h>
 #include <DallasTemperature.h>
 #include <OneWire.h>
@@ -17,13 +16,13 @@
 
 // AirCon Defaults
 
-#define ACWA_TEMP   26          // 16..30
+#define ACWA_TEMP   28          // 16..30
 #define ACWA_FAN    FAN_AUTO    // FAN_AUTO, FAN_1 .. FAN_5
 #define ACWA_MODE   MODE_HEAT   // MODE_AUTO,MODE_COOL, MODE_HEAT, MODE_DRY, MODE_FAN, MODE_OFF
 #define ACWA_VS     VDIR_MIDDLE // VDIR_AUTO, VDIR_UP, VDIR_MUP, VDIR_MIDDLE, VDIR_MDOWN, VDIR_DOWN
 #define ACWA_HS     HDIR_AUTO   // HDIR_AUTO, HDIR_LEFT .. HDIR_RIGHT
 
-#define ACWL_TEMP   26
+#define ACWL_TEMP   25
 #define ACWL_FAN    FAN_1 
 #define ACWL_MODE   MODE_HEAT
 #define ACWL_VS     VDIR_MIDDLE
@@ -50,7 +49,7 @@
 // Children Defaults
 
 #define Temp_CHILD 1           // Id of the DHT-temperature child
-#define ACWH_CHILD 2           // Id of the AC Warm 2 hours child
+#define ACWA_CHILD 2           // Id of the AC Warm 2 hours child
 #define ACWL_CHILD 3           // Id of the AC Warm 6 hours child
 #define ACAA_CHILD 4
 #define ACCA_CHILD 5
@@ -63,8 +62,8 @@ DeviceAddress tempDeviceAddress;
 const int  resolution = 11; // DS18B20 can set the resolution up to 12 bits
 
 MyTransportNRF24 radio(RF24_CE_PIN, RF24_CS_PIN, RF24_PA_MAX);
-
-MySensor gw(radio);
+MyHwATMega328 hw;
+MySensor gw(radio, hw);
 
 MyMessage tempMsg(Temp_CHILD, V_TEMP);
 MyMessage acwaMsg(ACWA_CHILD, V_LIGHT);
@@ -105,13 +104,21 @@ void setup() {
   gw.begin(incomingMessage, AUTO, true);
 
   // Register all sensors to gw (they will be created as child devices)
+  gw.wait(1000);
   gw.present( Temp_CHILD, S_TEMP );
+  gw.wait(150);
   gw.present( ACWA_CHILD, S_LIGHT );
+  gw.wait(150);
   gw.present( ACWL_CHILD, S_LIGHT );
+  gw.wait(150);
   gw.present( ACAA_CHILD, S_LIGHT );
+  gw.wait(150);
   gw.present( ACCA_CHILD, S_LIGHT );
+  gw.wait(150);
   gw.present( ACCL_CHILD, S_LIGHT );
+  gw.wait(150);
   gw.sendSketchInfo(SN, SV);
+  gw.wait(150);
 
   // Schedule Temperature update
   read_temp();
@@ -136,11 +143,7 @@ void read_temp() {
   gw.wait(1000); // asynch wait for conversion
   float temp = sensors.getTempCByIndex(0);
   
-  // Debug
-  Serial.println(temp);
-  gw.send(tempdbg.set(temp, 1)); 
-  // endDebug
-  
+    
   // Check if temp was read correctly
   if ( (temp < -50) || (temp > 60) ) {  // Ignore obviously wrong readings 
     Serial.println(F("Failed to read temperature from Dallas"));
